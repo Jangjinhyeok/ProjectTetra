@@ -137,7 +137,7 @@ bool FTetrisBoardGarbageTest::RunTest(const FString&)
 
 	// 기존 블록은 2칸 위로 이동
 	TestEqual(TEXT("기존 블록 위로 이동"), B->GetCell(2, 2).Type, EPieceType::T);
-	TestTrue(TEXT("원래 위치 비어있음"), B->GetCell(2, 0).IsEmpty());
+	// 원래 위치(2,0)는 새로 삽입된 가비지 행이 채우므로 Empty가 아니다 — 아래 가비지 행 검증에서 확인.
 
 	// 가비지 행 검증
 	for (int32 X = 0; X < BoardWidth; ++X)
