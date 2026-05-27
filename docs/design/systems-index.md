@@ -22,7 +22,7 @@ Tetra-UE는 UE5 기반 경쟁형 테트리스로, 핵심 목표는 MVVM + FieldN
 | 1 | Board (Playfield) | Core | MVP | Designed | design/gdd/board.md | — |
 | 2 | Piece/SRS | Core | MVP | Designed | design/gdd/piece-srs.md | — |
 | 3 | Randomizer | Core | MVP | Designed | design/gdd/randomizer.md | Piece |
-| 4 | Input/Handling (DAS/ARR) | Core | MVP | Not Started | — | — |
+| 4 | Input/Handling (DAS/ARR) | Core | MVP | Approved | design/gdd/input-handling.md | FSM, Session |
 | 5 | Lock Delay | Gameplay | MVP | Approved | design/gdd/lock-delay.md | Board, Piece (FSM 경유) |
 | 6 | FSM (Game State Machine) | Core | MVP | Approved | design/gdd/fsm.md | Board, Piece, Randomizer, Lock Delay, Input, Hold |
 | 7 | Score/Level | Gameplay | MVP | Approved | design/gdd/scoring.md | FSM (OnPieceLocked) |
@@ -32,7 +32,7 @@ Tetra-UE는 UE5 기반 경쟁형 테트리스로, 핵심 목표는 MVVM + FieldN
 | 11 | ViewModel | UI | MVP | Not Started | — | Board, Piece, Score/Level, FSM, Attack |
 | 12 | Board Renderer | UI | MVP | Not Started | — | ViewModel, Board |
 | 13 | HUD | UI | MVP | Not Started | — | ViewModel |
-| 14 | Game Session/Flow (inferred) | Core | VS | Not Started | — | FSM |
+| 14 | Game Session/Flow (Session Subsystem) | Core | MVP | Designed (ADR-0001) | docs/architecture/adr-0001-simulation-host-and-fixed-step-driver.md | FSM, Board, Randomizer, Scoring |
 | 15 | Menu System / CommonUI (inferred) | UI | VS | Not Started | — | Game Session/Flow |
 | 16 | Settings/Options (inferred) | Persistence | VS | Not Started | — | Input/Handling, Menu System |
 | 17 | Widget Animation (inferred) | UI | Alpha | Not Started | — | Board Renderer, HUD, ViewModel |
@@ -156,10 +156,10 @@ Tetra-UE는 UE5 기반 경쟁형 테트리스로, 핵심 목표는 MVVM + FieldN
 | Metric | Count |
 |--------|-------|
 | Total systems identified | 21 |
-| Design docs started | 6 |
-| Design docs reviewed | 3 (Core Loop: FSM, Lock Delay, Score/Level) |
-| Design docs approved | 3 (Core Loop: FSM, Lock Delay, Score/Level) |
-| MVP systems designed | 7/12 (Board, Piece/SRS, Randomizer, FSM, Hold-in-FSM, Lock Delay, Score/Level) |
+| Design docs started | 7 |
+| Design docs reviewed | 4 (FSM, Lock Delay, Score/Level, Input/Handling) |
+| Design docs approved | 4 (FSM, Lock Delay, Score/Level, Input/Handling) |
+| MVP systems designed | 8/12 (Board, Piece/SRS, Randomizer, FSM, Hold-in-FSM, Lock Delay, Score/Level, Input/Handling) |
 | Vertical Slice systems designed | 0/4 |
 | Alpha systems designed | 0/2 |
 | Full Vision systems designed | 0/3 |
