@@ -13,7 +13,7 @@ using namespace TetrisPieceData;
 
 namespace
 {
-	UTetrisBoard* MakeBoard() { UTetrisBoard* B = NewObject<UTetrisBoard>(); B->Clear(); return B; }
+	UTetrisBoard* MakePieceTestBoard() { UTetrisBoard* B = NewObject<UTetrisBoard>(); B->Clear(); return B; }
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FTetrisPieceSpawnTest,
@@ -43,7 +43,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FTetrisPieceFullRotationTest,
 	"Tetris.Piece.FullRotation", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FTetrisPieceFullRotationTest::RunTest(const FString&)
 {
-	UTetrisBoard* B = MakeBoard();
+	UTetrisBoard* B = MakePieceTestBoard();
 	const EPieceType Types[] = { EPieceType::I, EPieceType::O, EPieceType::T,
 		EPieceType::S, EPieceType::Z, EPieceType::J, EPieceType::L };
 
@@ -64,7 +64,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FTetrisPieceMoveTest,
 	"Tetris.Piece.Move", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FTetrisPieceMoveTest::RunTest(const FString&)
 {
-	UTetrisBoard* B = MakeBoard();
+	UTetrisBoard* B = MakePieceTestBoard();
 	FActivePiece P = FTetrisPieceOps::Spawn(EPieceType::T);
 	const FIntPoint Start = P.PivotPosition;
 
@@ -84,7 +84,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FTetrisPieceHardDropTest,
 	"Tetris.Piece.HardDrop", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FTetrisPieceHardDropTest::RunTest(const FString&)
 {
-	UTetrisBoard* B = MakeBoard();
+	UTetrisBoard* B = MakePieceTestBoard();
 	FActivePiece P = FTetrisPieceOps::Spawn(EPieceType::T);
 	const int32 StartY = P.PivotPosition.Y;
 	const int32 Distance = FTetrisPieceOps::HardDrop(P, *B);
@@ -100,7 +100,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FTetrisPieceWallKickTest,
 	"Tetris.Piece.WallKick", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FTetrisPieceWallKickTest::RunTest(const FString&)
 {
-	UTetrisBoard* B = MakeBoard();
+	UTetrisBoard* B = MakePieceTestBoard();
 	// T 피스를 좌측 벽에 붙이고 회전 → Kick으로 성공해야 함
 	FActivePiece P = FTetrisPieceOps::Spawn(EPieceType::T);
 	while (FTetrisPieceOps::TryMove(P, EMoveDirection::Left, *B)) {}
@@ -122,7 +122,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FTetrisPieceOPieceRotateTest,
 	"Tetris.Piece.OPieceRotate", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FTetrisPieceOPieceRotateTest::RunTest(const FString&)
 {
-	UTetrisBoard* B = MakeBoard();
+	UTetrisBoard* B = MakePieceTestBoard();
 	FActivePiece P = FTetrisPieceOps::Spawn(EPieceType::O);
 	TArray<FIntPoint> Before = FTetrisPieceOps::GetAbsoluteBlockPositions(P);
 	TestTrue(TEXT("O 회전 성공"), FTetrisPieceOps::TryRotate(P, ERotateDirection::CW, *B));
