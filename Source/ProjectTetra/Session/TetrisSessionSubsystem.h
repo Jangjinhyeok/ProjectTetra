@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "Input/TetrisHandling.h" // FTetrisHandling(값 멤버), FHandlingConfig/FHandlingInput/EInputEdge
 #include "TetrisSessionSubsystem.generated.h"
 
 class UTetrisBoard;
@@ -50,6 +51,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Tetris|Session")
 	void SetPaused(bool bPaused);
 
+	//~ 입력 수신 (PlayerController가 frame마다 호출 — 핸들링 버퍼에 의도만 기록, 타이밍 판단은 고정스텝 핸들링이)
+	/** 좌/우 held 상태 갱신. bLeft=true면 좌, false면 우. */
+	UFUNCTION(BlueprintCallable, Category = "Tetris|Session|Input")
+	void SetMoveHeld(bool bLeft, bool bHeld);
+
+	/** 이산 입력 엣지를 버퍼에 적재. 다음 고정스텝에서 드레인된다(빠른 탭 유실 방지). */
+	UFUNCTION(BlueprintCallable, Category = "Tetris|Session|Input")
+	void PushInputEdge(EInputEdge Edge);
+
 	/**
 	 * 고정스텝 전진 (fsm.md §F1). DeltaTime을 누적해 SimDelta 단위로 GameCore->Step()을 0..MaxStepsPerFrame회 호출.
 	 * Tick()이 위임하며, 라이브 월드 틱에 의존하지 않고 단독 검증 가능하도록 분리했다.
@@ -69,9 +79,19 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Tetris|Session", meta = (ClampMin = "1", ClampMax = "10"))
 	int32 MaxStepsPerFrame = 5;
 
+	/** 핸들링 튜닝값(DAS/ARR/DCD). StartGame/RestartGame 시 SimHz를 세션과 일치시켜 Handling에 주입. */
+	UPROPERTY(EditDefaultsOnly, Category = "Tetris|Session")
+	FHandlingConfig HandlingConfig;
+
 protected:
 	/** 소유 Core Loop 객체를 생성하고 와이어링한다. Initialize 및 StartGame(테스트 경로)에서 호출. 멱등. */
 	void CreateAndWireCore();
+
+	/** 한 고정스텝 직전: 입력 버퍼 스냅샷·드레인 → 순수 핸들링 → 명령을 GameCore에 적재. */
+	void DriveHandlingForStep();
+
+	/** 핸들링/버퍼 초기화 + 세션 SimHz로 Config 주입. StartGame/RestartGame에서 호출. */
+	void ResetHandling();
 
 	/** tetra.DebugBoard CVar가 켜져 있을 때 보드+활성 피스+상태/점수를 ASCII로 출력(PIE 육안용). UI 미사용. */
 	void DebugDrawBoard();
@@ -94,4 +114,10 @@ protected:
 
 	/** 고정스텝 잔여 시간(초). 멤버로 이월해 드리프트 없이 누적. */
 	double TimeAccumulator = 0.0;
+
+	/** 순수 DAS/ARR/DCD 핸들러(세션 소유·구동). LockDelay가 GameCore에 소유되는 것과 동일 composition. */
+	FTetrisHandling Handling;
+
+	/** frame→fixed-step 입력 핸드오프 버퍼. PC가 쓰고 매 Step에서 스냅샷·드레인. 단일 게임스레드 가정(락 불필요). */
+	FHandlingInput InputBuffer;
 };

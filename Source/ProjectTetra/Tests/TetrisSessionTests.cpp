@@ -5,6 +5,7 @@
 #include "Session/TetrisSessionSubsystem.h"
 #include "FSM/TetrisGameCore.h"
 #include "Block/TetrisPiece.h"
+#include "Input/TetrisHandlingTypes.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -94,6 +95,71 @@ bool FTetrisSessionDeterminismTest::RunTest(const FString&)
 	TestTrue(TEXT("동일 피봇"), PA.PivotPosition == PB.PivotPosition);
 	TestTrue(TEXT("동일 회전"), PA.RotationState == PB.RotationState);
 	TestTrue(TEXT("동일 상태"), A->GetGameCore()->GetState() == B->GetGameCore()->GetState());
+	return true;
+}
+
+//~ 입력 핸들링 통합 (PC→Session→Handling→GameCore) ---------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FTetrisSessionPressMovesOneTest,
+	"Tetris.Session.InputPressMovesOneCell", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FTetrisSessionPressMovesOneTest::RunTest(const FString&)
+{
+	UTetrisSessionSubsystem* Sub = NewObject<UTetrisSessionSubsystem>();
+	Sub->StartGame(1);
+	const int32 X0 = Sub->GetGameCore()->GetActivePiece().PivotPosition.X;
+
+	// 좌 press 1회 + held → 1 고정스텝에서 정확히 1칸 좌이동.
+	Sub->SetMoveHeld(true, true);
+	Sub->PushInputEdge(EInputEdge::MoveLeftPress);
+	Sub->AdvanceFixedSteps(1.0f / 60.0f);
+
+	const int32 X1 = Sub->GetGameCore()->GetActivePiece().PivotPosition.X;
+	TestEqual(TEXT("press 1회 → 좌로 정확히 1칸"), X1, X0 - 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FTetrisSessionHeldDasArrTest,
+	"Tetris.Session.InputHeldDasArrDeterministic", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FTetrisSessionHeldDasArrTest::RunTest(const FString&)
+{
+	// 좌 held로 N스텝 누적 → DAS/ARR로 반복 이동. 두 번 실행해도 동일(결정적).
+	auto Run = [](int32 NSteps) -> int32
+	{
+		UTetrisSessionSubsystem* Sub = NewObject<UTetrisSessionSubsystem>();
+		Sub->StartGame(777);
+		Sub->SetMoveHeld(true, true);
+		Sub->PushInputEdge(EInputEdge::MoveLeftPress);
+		for (int32 i = 0; i < NSteps; ++i)
+		{
+			Sub->AdvanceFixedSteps(1.0f / 60.0f);
+		}
+		return Sub->GetGameCore()->GetActivePiece().PivotPosition.X;
+	};
+
+	const int32 AfterPress = Run(1);   // press만 → 1칸
+	const int32 AfterHold = Run(20);   // press + DAS 경과 후 ARR 반복 → 더 많이 좌이동(벽 클램프)
+	const int32 AfterHold2 = Run(20);  // 동일 입력 재현
+
+	TestTrue(TEXT("held 지속 → press보다 더 좌측(자동반복 발생)"), AfterHold < AfterPress);
+	TestEqual(TEXT("동일 입력 → 동일 X(결정적)"), AfterHold, AfterHold2);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FTetrisSessionStartClearsInputTest,
+	"Tetris.Session.StartGameClearsStaleInput", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FTetrisSessionStartClearsInputTest::RunTest(const FString&)
+{
+	// StartGame 직전의 잔여 입력(held + edge)은 무시되어야 한다(Edge 7).
+	UTetrisSessionSubsystem* Sub = NewObject<UTetrisSessionSubsystem>();
+	Sub->SetMoveHeld(true, true);
+	Sub->PushInputEdge(EInputEdge::MoveLeftPress);
+
+	Sub->StartGame(1); // 버퍼·핸들링 클리어
+	const int32 X0 = Sub->GetGameCore()->GetActivePiece().PivotPosition.X;
+	Sub->AdvanceFixedSteps(1.0f / 60.0f);
+	const int32 X1 = Sub->GetGameCore()->GetActivePiece().PivotPosition.X;
+
+	TestEqual(TEXT("시작 전 잔여 입력 무시 → 첫 스텝 좌이동 없음"), X1, X0);
 	return true;
 }
 

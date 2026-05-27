@@ -80,6 +80,7 @@ void UTetrisSessionSubsystem::CreateAndWireCore()
 void UTetrisSessionSubsystem::StartGame(int64 Seed)
 {
 	CreateAndWireCore(); // Initialize 미경유(테스트) 안전 — 멱등
+	ResetHandling();     // input-handling.md Edge 7: 시작 시 버퍼·핸들링 클리어(직전 잔여 입력 무시)
 	GameCore->StartGame(Seed);
 	TimeAccumulator = 0.0;
 	bRunning = true;
@@ -91,9 +92,42 @@ void UTetrisSessionSubsystem::RestartGame()
 	{
 		return;
 	}
+	ResetHandling();
 	GameCore->RestartGame();
 	TimeAccumulator = 0.0;
 	bRunning = true;
+}
+
+void UTetrisSessionSubsystem::ResetHandling()
+{
+	// 세션 SimHz를 강제로 일치시켜 ms→스텝 환산이 루프 주파수와 결정적으로 맞물리게 한다(에디터 값 비파괴 — 로컬 복사).
+	FHandlingConfig Cfg = HandlingConfig;
+	Cfg.SimHz = SimHz;
+	Handling.SetConfig(Cfg);
+	Handling.Reset();
+	InputBuffer = FHandlingInput(); // held + edge 전부 클리어
+}
+
+void UTetrisSessionSubsystem::SetMoveHeld(bool bLeft, bool bHeld)
+{
+	if (bLeft) { InputBuffer.bLeftHeld = bHeld; }
+	else { InputBuffer.bRightHeld = bHeld; }
+}
+
+void UTetrisSessionSubsystem::PushInputEdge(EInputEdge Edge)
+{
+	InputBuffer.Edges.Add(Edge);
+}
+
+void UTetrisSessionSubsystem::DriveHandlingForStep()
+{
+	// 버퍼 스냅샷(held + 누적 edge) → edge 드레인(1회 소비; held는 PC가 갱신하므로 유지) → 순수 핸들링 → 명령 적재.
+	const FHandlingInput Snapshot = InputBuffer;
+	InputBuffer.Edges.Reset();
+	for (const EGameCommand Cmd : Handling.AdvanceStep(Snapshot))
+	{
+		GameCore->EnqueueCommand(Cmd);
+	}
 }
 
 void UTetrisSessionSubsystem::SetPaused(bool bPaused)
@@ -114,6 +148,7 @@ int32 UTetrisSessionSubsystem::AdvanceFixedSteps(float DeltaTime)
 	int32 Steps = 0;
 	while (TimeAccumulator >= SimDelta && Steps < MaxStepsPerFrame)
 	{
+		DriveHandlingForStep(); // 매 Step 직전: 입력 → 명령 적재 (input-handling.md 통합 지점)
 		GameCore->Step();
 		TimeAccumulator -= SimDelta;
 		++Steps;
