@@ -60,7 +60,7 @@ Board/Piece/FSM/Score    이벤트 발행                바인딩으로 표시�
 | Score / Level | Model | ✅ 구현 + 테스트 | lines/combo/B2B, 중력 커브 소유 |
 | **FSM (GameCore)** | Model | ✅ 구현 + 테스트 | 오케스트레이터, 고정스텝, 명령 큐 |
 | Input / Handling (DAS/ARR) | Model | ⏳ 예정 | Enhanced Input → 명령 큐 |
-| Session 와이어링 | Core | ⏳ 예정 | GameMode가 `Step()` 구동 |
+| Session 와이어링 | Core | ✅ 구현 + 테스트 | WorldSubsystem 호스트 + 고정스텝 구동 (ADR-0001) |
 | ViewModel | UI | ⏳ 예정 | UMG ViewModel + FieldNotify |
 | Board Renderer / HUD | UI | ⏳ 예정 | UMG, 이후 Retainer/SDF 최적화 |
 | Menu / Common UI | UI | ⏳ 예정 | 화면 스택, 입력 라우팅 |
@@ -95,6 +95,9 @@ ProjectTetra/
 - [`docs/design/board.md`](docs/design/board.md) · [`piece-srs.md`](docs/design/piece-srs.md) · [`randomizer.md`](docs/design/randomizer.md)
 - [`docs/design/fsm.md`](docs/design/fsm.md) · [`lock-delay.md`](docs/design/lock-delay.md) · [`scoring.md`](docs/design/scoring.md)
 
+**아키텍처 결정 기록(ADR)** — `docs/architecture/`
+- [`adr-0001-simulation-host-and-fixed-step-driver.md`](docs/architecture/adr-0001-simulation-host-and-fixed-step-driver.md) — 시뮬레이션 호스트(Tickable World Subsystem) & 고정스텝 구동
+
 ---
 
 ## 빌드 & 테스트
@@ -114,9 +117,10 @@ ProjectTetra/
 
 ## 로드맵
 
-1. **Input / Handling** — Enhanced Input + DAS/ARR/DCD/SDF → 명령 큐 연결
-2. **Session 와이어링** — GameMode/GameInstance가 Board/Randomizer/Scoring/GameCore 생성·고정스텝 구동
-3. **ViewModel** — UMG ViewModel + FieldNotify로 게임 상태 노출 (첫 MVVM 적용)
-4. **Board Renderer / HUD** — UMG 렌더링 → 측정 기반 최적화(Retainer Box → SDF)
-5. **Common UI** — 화면 스택·입력 라우팅·게임패드 지원
-6. **Polish** — Widget Animation, Widget Pooling, 사운드, 랭킹(SaveGame)
+1. **Input / Handling** (다음) — Enhanced Input + DAS/ARR/DCD/SDF → 명령 큐 연결
+2. **ViewModel** — UMG ViewModel + FieldNotify로 게임 상태 노출 (첫 MVVM 적용)
+3. **Board Renderer / HUD** — UMG 렌더링 → 측정 기반 최적화(Retainer Box → SDF)
+4. **Common UI** — 화면 스택·입력 라우팅·게임패드 지원
+5. **Polish** — Widget Animation, Widget Pooling, 사운드, 랭킹(SaveGame)
+
+> Session 와이어링(WorldSubsystem 호스트 + 고정스텝 구동)은 완료됨 — `docs/architecture/adr-0001` 참조.
