@@ -61,6 +61,41 @@ enum class ETopOutType : uint8
 };
 
 /**
+ * 게임 루프 FSM 상태.
+ * Why: FSM(TetrisGameCore)이 한 판의 진행(스폰→낙하→락→클리어)을 상태 기계로 구동한다.
+ *   Idle은 미시작 대기, GameOver는 터미널 상태.
+ */
+UENUM(BlueprintType)
+enum class EGameState : uint8
+{
+	Idle      UMETA(DisplayName = "Idle"),       // 게임 미시작/대기
+	Spawn     UMETA(DisplayName = "Spawn"),      // 다음 피스 배치 + Block Out 검사
+	Falling   UMETA(DisplayName = "Falling"),    // 중력 적분 + 명령 처리 (루프 본체)
+	Locking   UMETA(DisplayName = "Locking"),    // 접지 후 Lock Delay 카운트다운
+	LineClear UMETA(DisplayName = "LineClear"),  // 라인 제거 + Lock Out 검사
+	GameOver  UMETA(DisplayName = "GameOver"),   // 종료(터미널). 입력 무시
+};
+
+/**
+ * FSM에 유입되는 추상 게임 명령.
+ * Why: FSM은 Enhanced Input을 직접 모르고, Input 시스템이 적재한 추상 명령 큐만 소비한다.
+ *   결정성 + 단위 테스트 용이성을 위한 입력 비결합 경계선이다.
+ *   SoftDropOn/Off는 지속 상태(bSoftDropHeld) 토글, 나머지는 이산 명령.
+ */
+UENUM(BlueprintType)
+enum class EGameCommand : uint8
+{
+	MoveLeft    UMETA(DisplayName = "MoveLeft"),
+	MoveRight   UMETA(DisplayName = "MoveRight"),
+	RotateCW    UMETA(DisplayName = "RotateCW"),
+	RotateCCW   UMETA(DisplayName = "RotateCCW"),
+	SoftDropOn  UMETA(DisplayName = "SoftDropOn"),
+	SoftDropOff UMETA(DisplayName = "SoftDropOff"),
+	HardDrop    UMETA(DisplayName = "HardDrop"),
+	Hold        UMETA(DisplayName = "Hold"),
+};
+
+/**
  * 단일 셀 상태.
  * Why: 향후 셀 메타데이터(예: 가비지 색상, 폭탄 블록 등)를 확장 가능하도록 struct로 둔다.
  */
