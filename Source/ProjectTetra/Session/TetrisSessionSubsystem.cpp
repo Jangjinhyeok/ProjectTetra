@@ -7,6 +7,7 @@
 #include "FSM/TetrisGameCore.h"
 #include "Block/TetrisPiece.h"
 #include "Core/TetrisTypes.h"
+#include "UI/ViewModel/TetrisHUDViewModelBinder.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "HAL/IConsoleManager.h"
@@ -51,6 +52,11 @@ void UTetrisSessionSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 void UTetrisSessionSubsystem::Deinitialize()
 {
 	bRunning = false;
+	if (HUDBinder)
+	{
+		HUDBinder->Unbind(); // 구독 해제 + 컬렉션 제거
+		HUDBinder = nullptr;
+	}
 	GameCore = nullptr;
 	Scoring = nullptr;
 	Randomizer = nullptr;
@@ -81,6 +87,12 @@ void UTetrisSessionSubsystem::StartGame(int64 Seed)
 {
 	CreateAndWireCore(); // Initialize 미경유(테스트) 안전 — 멱등
 	ResetHandling();     // input-handling.md Edge 7: 시작 시 버퍼·핸들링 클리어(직전 잔여 입력 무시)
+	// GameCore->StartGame 이전에 Bind — 시작 중 발행되는 델리게이트(상태 전이·큐 초기화)를 VM이 받아 시작 상태를 반영한다(viewmodel.md 생명주기).
+	if (!HUDBinder)
+	{
+		HUDBinder = NewObject<UTetrisHUDViewModelBinder>(this);
+	}
+	HUDBinder->Bind(GameCore, Scoring, Randomizer); // Bind는 재진입 안전(내부에서 기존 바인딩 정리)
 	GameCore->StartGame(Seed);
 	TimeAccumulator = 0.0;
 	bRunning = true;
@@ -93,9 +105,20 @@ void UTetrisSessionSubsystem::RestartGame()
 		return;
 	}
 	ResetHandling();
+	// Unbind→Bind로 VM 재생성 + 스냅샷 재주입 → 이전 판 값 잔존 없음(viewmodel.md Edge 3).
+	if (!HUDBinder)
+	{
+		HUDBinder = NewObject<UTetrisHUDViewModelBinder>(this);
+	}
+	HUDBinder->Bind(GameCore, Scoring, Randomizer);
 	GameCore->RestartGame();
 	TimeAccumulator = 0.0;
 	bRunning = true;
+}
+
+UTetrisHUDViewModel* UTetrisSessionSubsystem::GetHUDViewModel() const
+{
+	return HUDBinder ? HUDBinder->GetViewModel() : nullptr;
 }
 
 void UTetrisSessionSubsystem::ResetHandling()

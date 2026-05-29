@@ -29,7 +29,7 @@ Tetra-UE는 UE5 기반 경쟁형 테트리스로, 핵심 목표는 MVVM + FieldN
 | 8 | Hold | Gameplay | MVP | Approved (in FSM, contains) | design/gdd/fsm.md | Piece, Randomizer |
 | 9 | Ghost Piece | Gameplay | MVP | Not Started | — | Board, Piece |
 | 10 | Attack/Garbage | Gameplay | VS | Not Started | — | Board, Score/Level |
-| 11 | ViewModel | UI | MVP | Not Started | — | Board, Piece, Score/Level, FSM, Attack |
+| 11 | ViewModel | UI | MVP | Approved | design/gdd/viewmodel.md | Board, Piece, Score/Level, FSM, Attack |
 | 12 | Board Renderer | UI | MVP | Not Started | — | ViewModel, Board |
 | 13 | HUD | UI | MVP | Not Started | — | ViewModel |
 | 14 | Game Session/Flow (Session Subsystem) | Core | MVP | Designed (ADR-0001) | docs/architecture/adr-0001-simulation-host-and-fixed-step-driver.md | FSM, Board, Randomizer, Scoring |
@@ -156,10 +156,10 @@ Tetra-UE는 UE5 기반 경쟁형 테트리스로, 핵심 목표는 MVVM + FieldN
 | Metric | Count |
 |--------|-------|
 | Total systems identified | 21 |
-| Design docs started | 7 |
-| Design docs reviewed | 4 (FSM, Lock Delay, Score/Level, Input/Handling) |
-| Design docs approved | 4 (FSM, Lock Delay, Score/Level, Input/Handling) |
-| MVP systems designed | 8/12 (Board, Piece/SRS, Randomizer, FSM, Hold-in-FSM, Lock Delay, Score/Level, Input/Handling) |
+| Design docs started | 8 |
+| Design docs reviewed | 5 (FSM, Lock Delay, Score/Level, Input/Handling, ViewModel) |
+| Design docs approved | 5 (FSM, Lock Delay, Score/Level, Input/Handling, ViewModel) |
+| MVP systems designed | 9/12 (Board, Piece/SRS, Randomizer, FSM, Hold-in-FSM, Lock Delay, Score/Level, Input/Handling, ViewModel) |
 | Vertical Slice systems designed | 0/4 |
 | Alpha systems designed | 0/2 |
 | Full Vision systems designed | 0/3 |

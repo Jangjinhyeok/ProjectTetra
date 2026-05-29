@@ -10,7 +10,8 @@ public class ProjectTetra : ModuleRules
 
 		PublicIncludePaths.AddRange(new string[] { ModuleDirectory });
 
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput" });
+		// ModelViewViewModel/FieldNotification: HUD ViewModel(MVVM + FieldNotify) — viewmodel.md.
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "ModelViewViewModel", "FieldNotification" });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 

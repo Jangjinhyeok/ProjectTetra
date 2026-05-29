@@ -4,8 +4,10 @@
 #include "Misc/AutomationTest.h"
 #include "Session/TetrisSessionSubsystem.h"
 #include "FSM/TetrisGameCore.h"
+#include "System/TetrisScoring.h"
 #include "Block/TetrisPiece.h"
 #include "Input/TetrisHandlingTypes.h"
+#include "UI/ViewModel/TetrisHUDViewModel.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -160,6 +162,31 @@ bool FTetrisSessionStartClearsInputTest::RunTest(const FString&)
 	const int32 X1 = Sub->GetGameCore()->GetActivePiece().PivotPosition.X;
 
 	TestEqual(TEXT("시작 전 잔여 입력 무시 → 첫 스텝 좌이동 없음"), X1, X0);
+	return true;
+}
+
+//~ HUD ViewModel 통합 (Session 소유 바인더) -----------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FTetrisSessionHUDViewModelTest,
+	"Tetris.Session.HUDViewModelReflectsStart", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FTetrisSessionHUDViewModelTest::RunTest(const FString&)
+{
+	UTetrisSessionSubsystem* Sub = NewObject<UTetrisSessionSubsystem>();
+	Sub->StartGame(123);
+
+	UTetrisHUDViewModel* VM = Sub->GetHUDViewModel();
+	TestNotNull(TEXT("StartGame 후 HUD VM non-null"), VM);
+	if (!VM)
+	{
+		return false;
+	}
+
+	// V2 + StartGame 중 발행된 델리게이트가 VM에 반영되어 시작 상태를 담는다.
+	TestEqual(TEXT("Score == Scoring getter"), VM->GetScore(), Sub->GetScoring()->GetScore());
+	TestEqual(TEXT("Level == Scoring getter"), VM->GetLevel(), Sub->GetScoring()->GetLevel());
+	TestEqual(TEXT("GameState == Core 상태"), VM->GetGameState(), Sub->GetGameCore()->GetState());
+	TestTrue(TEXT("시작 후 Idle 아님(상태 전이 반영)"), VM->GetGameState() != EGameState::Idle);
+	TestEqual(TEXT("NextQueue 5개(큐 초기화 반영)"), VM->GetNextQueue().Num(), 5);
 	return true;
 }
 

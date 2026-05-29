@@ -61,7 +61,7 @@ Board/Piece/FSM/Score    이벤트 발행                바인딩으로 표시�
 | **FSM (GameCore)** | Model | ✅ 구현 + 테스트 | 오케스트레이터, 고정스텝, 명령 큐 |
 | Input / Handling (DAS/ARR) | Core | ✅ 구현 + 테스트 | 고정스텝 순수 핸들링(DAS/ARR/DCD) + Enhanced Input |
 | Session 와이어링 | Core | ✅ 구현 + 테스트 | WorldSubsystem 호스트 + 고정스텝 구동 (ADR-0001) |
-| ViewModel | UI | ⏳ 예정 | UMG ViewModel + FieldNotify |
+| ViewModel (HUD) | UI | ✅ 구현 + 테스트 | HUD VM + 바인더, FieldNotify, MVVM Global Collection (위젯은 #12/#13) |
 | Board Renderer / HUD | UI | ⏳ 예정 | UMG, 이후 Retainer/SDF 최적화 |
 | Menu / Common UI | UI | ⏳ 예정 | 화면 스택, 입력 라우팅 |
 
@@ -117,9 +117,9 @@ ProjectTetra/
 
 ## 로드맵
 
-1. **ViewModel** (다음) — UMG ViewModel + FieldNotify로 게임 상태 노출 (첫 MVVM 적용)
-2. **Board Renderer / HUD** — UMG 렌더링 → 측정 기반 최적화(Retainer Box → SDF)
+1. **ViewModel** ✅ — HUD VM + 바인더 + FieldNotify로 게임 상태 노출 (첫 MVVM 적용, Global VM Collection)
+2. **Board Renderer / HUD** (다음) — UMG 렌더링 → 측정 기반 최적화(Retainer Box → SDF)
 3. **Common UI** — 화면 스택·입력 라우팅·게임패드 지원
 4. **Polish** — Widget Animation, Widget Pooling, 사운드, 랭킹(SaveGame)
 
-> Session 와이어링 + Input/Handling은 완료됨 — `docs/architecture/adr-0001`, `docs/design/input-handling.md` 참조. (키보드 플레이는 에디터에서 IMC/IA 에셋 + 기본 GameMode 지정 후 PIE 가능)
+> Session 와이어링 + Input/Handling + ViewModel(HUD)은 완료됨 — `docs/architecture/adr-0001`, `docs/design/input-handling.md`, `docs/design/viewmodel.md` 참조. (키보드 플레이는 에디터에서 IMC/IA 에셋 + 기본 GameMode 지정 후 PIE 가능; HUD 위젯 바인딩은 #13)
