@@ -30,7 +30,7 @@ Tetra-UE는 UE5 기반 경쟁형 테트리스로, 핵심 목표는 MVVM + FieldN
 | 9 | Ghost Piece | Gameplay | MVP | Not Started | — | Board, Piece |
 | 10 | Attack/Garbage | Gameplay | VS | Not Started | — | Board, Score/Level |
 | 11 | ViewModel | UI | MVP | Approved | design/gdd/viewmodel.md | Board, Piece, Score/Level, FSM, Attack |
-| 12 | Board Renderer | UI | MVP | Not Started | — | ViewModel, Board |
+| 12 | Board Renderer | UI | MVP | Implemented (PIE 육안 대기) | HANDOFF (Board VM + UMG 렌더) | ViewModel, Board |
 | 13 | HUD | UI | MVP | Not Started | — | ViewModel |
 | 14 | Game Session/Flow (Session Subsystem) | Core | MVP | Designed (ADR-0001) | docs/architecture/adr-0001-simulation-host-and-fixed-step-driver.md | FSM, Board, Randomizer, Scoring |
 | 15 | Menu System / CommonUI (inferred) | UI | VS | Not Started | — | Game Session/Flow |

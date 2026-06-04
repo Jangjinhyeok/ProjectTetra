@@ -5,6 +5,10 @@
 > **Last Updated**: 2026-05-29
 > **Implements Pillar**: MVVM + FieldNotify 기반 이벤트 주도 UI (포트폴리오 핵심)
 
+## 정정 노트 (2026-05-30)
+
+본 문서는 HUD ViewModel 설계 시점 기준이라 "보드 그리드는 VM을 거치지 않는다"고 적은 곳이 있다(아래 Overview·핵심 프레이밍 4·Dependencies 표). **이 전제는 폐기되었다.** 사용자 결정(2026-05-30)으로 보드 그리드도 View가 Model을 직접 읽지 않고 **Board 전용 ViewModel(`UTetrisBoardViewModel`)을 경유**한다(MVVM 일관성). 보드 경로의 설계 권위 문서는 Board Renderer HANDOFF이며, HUD VM과 동일한 패턴(전용 바인더 + Global View Model Collection)을 따른다. 따라서 아래 본문에서 "보드 그리드 = VM 미경유/별도 경로" 표현은 "Board VM 경유"로 읽는다.
+
 ## Overview
 
 ViewModel은 검증된 순수 Model 계층(GameCore/Scoring/Randomizer)의 상태를 **UMG View가 바인딩으로 소비할 형태로 변환**하는 MVVM의 중간 계층이다. 이번 단계는 **HUD 전용 ViewModel**(점수/레벨/줄/콤보/B2B + Next 큐 + Hold + 게임 상태)에 한정하며, 보드 그리드 렌더링은 별도 시스템(#12 Board Renderer)으로 분리한다. Model은 이미 이벤트 주도 델리게이트(`On*Changed`)를 노출하므로, ViewModel은 그것을 구독해 **값이 실제로 바뀔 때만** `FieldNotify`로 View에 통지한다 — `Tick`/Property Binding 매 프레임 polling 금지. 소유·와이어링은 UE5.7 표준 경로(**전용 UI 바인더 + Global View Model Collection**)를 따른다: VM은 순수 데이터 홀더로 두고, 별도 바인더(UObject)가 Model 델리게이트 → VM setter 연결과 컬렉션 등록/해제를 책임진다. 이 분리 덕에 ViewModel은 **위젯·월드 없이 단위 테스트**가 가능하며(Model 계층과 동일한 검증 가능성), MVVM 분리 원칙을 코드로 증명한다.
@@ -169,7 +173,7 @@ Bind 직후 VM의 모든 필드 == 해당 Model getter의 현재 반환값
 
 | 시스템 | 유형 | 사용 |
 |--------|------|------|
-| Board Renderer (#12) | — | 보드 그리드는 별도 경로(VM 미사용) — 본 HUD VM과 무관 |
+| Board Renderer (#12) | — | 보드 그리드는 **Board 전용 VM(`UTetrisBoardViewModel`) 경유**(2026-05-30 결정, 상단 정정 노트). 본 HUD VM과는 별개의 VM·바인더지만 동일 MVVM 패턴 |
 | HUD (#13) | Hard | `WBP_HUD`가 `"TetrisHUD"` VM 바인딩 |
 | Menu/CommonUI (#15) | Soft | 게임오버 화면이 `GameState`/(향후 `ETopOutType`) 소비 |
 

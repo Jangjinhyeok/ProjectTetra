@@ -9,6 +9,7 @@
 #include "InputAction.h"
 #include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
+#include "Blueprint/UserWidget.h"
 
 void ATetrisPlayerController::BeginPlay()
 {
@@ -29,6 +30,17 @@ void ATetrisPlayerController::BeginPlay()
 			{
 				UE_LOG(LogTemp, Warning, TEXT("[Tetra] PlayerController: IMC_Gameplay 미지정 — 에디터에서 IMC 에셋을 할당하세요."));
 			}
+		}
+	}
+
+	// 보드 위젯 생성·viewport 부착. 클래스 미지정 시 무동작(null-safe) — #12 G6에서 WBP_Board를 디폴트에 지정.
+	// 위젯은 NativeConstruct에서 VM을 "TetrisBoard" 컬렉션 키로 resolve하므로 여기선 클래스만 알면 된다(View는 Session/바인더 비참조).
+	if (BoardWidgetClass && !BoardWidget && IsLocalController())
+	{
+		BoardWidget = CreateWidget<UUserWidget>(this, BoardWidgetClass);
+		if (BoardWidget)
+		{
+			BoardWidget->AddToViewport();
 		}
 	}
 }

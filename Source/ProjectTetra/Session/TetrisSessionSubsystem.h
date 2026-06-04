@@ -13,6 +13,8 @@ class UTetrisScoring;
 class UTetrisGameCore;
 class UTetrisHUDViewModel;
 class UTetrisHUDViewModelBinder;
+class UTetrisBoardViewModel;
+class UTetrisBoardViewModelBinder;
 
 /**
  * Tetris 시뮬레이션 호스트 (ADR-0001).
@@ -73,9 +75,13 @@ public:
 	UTetrisGameCore* GetGameCore() const { return GameCore; }
 	UTetrisScoring* GetScoring() const { return Scoring; }
 	UTetrisRandomizer* GetRandomizer() const { return Randomizer; }
+	UTetrisBoard* GetBoard() const { return Board; }
 
 	/** HUD가 바인딩할 ViewModel. 바인더가 소유하며, 미시작 시 null. (실제 위젯 바인딩은 #13) */
 	UTetrisHUDViewModel* GetHUDViewModel() const;
+
+	/** Board 위젯(#12)이 바인딩할 ViewModel. BoardBinder가 소유하며, 미시작 시 null. */
+	UTetrisBoardViewModel* GetBoardViewModel() const;
 
 	//~ 튜닝 (fsm.md §F1)
 	/** 고정 시뮬 주파수. GameCore/LockDelay/Scoring의 SimHz와 일치시킨다. */
@@ -119,6 +125,10 @@ protected:
 	/** HUD ViewModel 바인더. Session이 소유·구동(LockDelay가 GameCore에, Handling이 Session에 소유되는 것과 동일 composition). */
 	UPROPERTY(Transient)
 	TObjectPtr<UTetrisHUDViewModelBinder> HUDBinder;
+
+	/** Board ViewModel 바인더. Session이 소유·구동 — HUD 바인더와 병렬 생명주기(#12 Board Renderer). */
+	UPROPERTY(Transient)
+	TObjectPtr<UTetrisBoardViewModelBinder> BoardBinder;
 
 	/** 시간 누적·구동 여부. Idle/Pause 시 false → 틱·누적 중단. */
 	bool bRunning = false;

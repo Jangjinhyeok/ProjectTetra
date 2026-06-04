@@ -8,6 +8,7 @@
 #include "Block/TetrisPiece.h"
 #include "Input/TetrisHandlingTypes.h"
 #include "UI/ViewModel/TetrisHUDViewModel.h"
+#include "UI/ViewModel/TetrisBoardViewModel.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -187,6 +188,30 @@ bool FTetrisSessionHUDViewModelTest::RunTest(const FString&)
 	TestEqual(TEXT("GameState == Core 상태"), VM->GetGameState(), Sub->GetGameCore()->GetState());
 	TestTrue(TEXT("시작 후 Idle 아님(상태 전이 반영)"), VM->GetGameState() != EGameState::Idle);
 	TestEqual(TEXT("NextQueue 5개(큐 초기화 반영)"), VM->GetNextQueue().Num(), 5);
+	return true;
+}
+
+//~ G4: Board VM Session 통합 (NewObject Session, 월드/위젯 불필요) ----------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FTetrisSessionBoardViewModelReflectsStartTest,
+	"Tetris.Session.BoardViewModelReflectsStart", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FTetrisSessionBoardViewModelReflectsStartTest::RunTest(const FString&)
+{
+	// StartGame이 CreateAndWireCore(멱등) → BoardBinder 생성·Bind → GameCore->StartGame 순으로 구동한다.
+	UTetrisSessionSubsystem* Session = NewObject<UTetrisSessionSubsystem>();
+	Session->StartGame(777);
+
+	UTetrisBoardViewModel* VM = Session->GetBoardViewModel();
+	TestNotNull(TEXT("StartGame 후 BoardViewModel non-null"), VM);
+	if (VM)
+	{
+		TestEqual(TEXT("LockedGrid 크기 200"), VM->GetLockedGrid().Num(), 200);
+		TestEqual(TEXT("GameState 시작 반영(Falling)"), VM->GetGameState(), EGameState::Falling);
+		// 시작 직후엔 lock된 블록이 없어 보드는 비어 있어야 한다(활성 피스는 LockedGrid에 미포함).
+		int32 NonEmpty = 0;
+		for (EPieceType T : VM->GetLockedGrid()) { if (T != EPieceType::None) { ++NonEmpty; } }
+		TestEqual(TEXT("시작 보드는 비어 있음"), NonEmpty, 0);
+	}
 	return true;
 }
 

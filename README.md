@@ -62,7 +62,8 @@ Board/Piece/FSM/Score    이벤트 발행                바인딩으로 표시�
 | Input / Handling (DAS/ARR) | Core | ✅ 구현 + 테스트 | 고정스텝 순수 핸들링(DAS/ARR/DCD) + Enhanced Input |
 | Session 와이어링 | Core | ✅ 구현 + 테스트 | WorldSubsystem 호스트 + 고정스텝 구동 (ADR-0001) |
 | ViewModel (HUD) | UI | ✅ 구현 + 테스트 | HUD VM + 바인더, FieldNotify, MVVM Global Collection (위젯은 #12/#13) |
-| Board Renderer / HUD | UI | ⏳ 예정 | UMG, 이후 Retainer/SDF 최적화 |
+| Board Renderer | UI | ✅ 구현 (PIE 육안 대기) | Board 전용 VM + 바인더 + UMG 보드 위젯(C++ base). WBP 제작 + PIE 확인 남음 |
+| HUD | UI | ⏳ 예정 | UMG, 이후 Retainer/SDF 최적화 |
 | Menu / Common UI | UI | ⏳ 예정 | 화면 스택, 입력 라우팅 |
 
 > 모든 Model 시스템은 **UI 없이 단위/통합 테스트로 완결**되도록 설계됨 (`Source/ProjectTetra/Tests/`).

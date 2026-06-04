@@ -8,6 +8,7 @@
 #include "Block/TetrisPiece.h"
 #include "Core/TetrisTypes.h"
 #include "UI/ViewModel/TetrisHUDViewModelBinder.h"
+#include "UI/ViewModel/TetrisBoardViewModelBinder.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "HAL/IConsoleManager.h"
@@ -57,6 +58,11 @@ void UTetrisSessionSubsystem::Deinitialize()
 		HUDBinder->Unbind(); // 구독 해제 + 컬렉션 제거
 		HUDBinder = nullptr;
 	}
+	if (BoardBinder)
+	{
+		BoardBinder->Unbind(); // 구독 해제 + 컬렉션 제거
+		BoardBinder = nullptr;
+	}
 	GameCore = nullptr;
 	Scoring = nullptr;
 	Randomizer = nullptr;
@@ -81,6 +87,14 @@ void UTetrisSessionSubsystem::CreateAndWireCore()
 	Scoring = NewObject<UTetrisScoring>(this);
 	GameCore = NewObject<UTetrisGameCore>(this);
 	GameCore->Initialize(Board, Randomizer, Scoring);
+
+	// Board VM을 월드 초기화 시점에 미리 생성·컬렉션 등록한다. 위젯은 NativeConstruct(PC BeginPlay,
+	// 이 시점보다 나중)에서 "TetrisBoard"로 안정적으로 resolve한다. StartGame은 이 VM을 재사용(rebind)한다.
+	if (!BoardBinder)
+	{
+		BoardBinder = NewObject<UTetrisBoardViewModelBinder>(this);
+	}
+	BoardBinder->EnsureViewModel();
 }
 
 void UTetrisSessionSubsystem::StartGame(int64 Seed)
@@ -93,6 +107,12 @@ void UTetrisSessionSubsystem::StartGame(int64 Seed)
 		HUDBinder = NewObject<UTetrisHUDViewModelBinder>(this);
 	}
 	HUDBinder->Bind(GameCore, Scoring, Randomizer); // Bind는 재진입 안전(내부에서 기존 바인딩 정리)
+	// Board 바인더도 GameCore->StartGame 이전에 Bind — 시작 중 발행되는 OnActivePieceUpdated/OnStateChanged + 초기 스냅샷을 VM이 받아 시작 보드를 반영(HUD 바인더와 병렬).
+	if (!BoardBinder)
+	{
+		BoardBinder = NewObject<UTetrisBoardViewModelBinder>(this);
+	}
+	BoardBinder->Bind(Board, GameCore);
 	GameCore->StartGame(Seed);
 	TimeAccumulator = 0.0;
 	bRunning = true;
@@ -111,6 +131,12 @@ void UTetrisSessionSubsystem::RestartGame()
 		HUDBinder = NewObject<UTetrisHUDViewModelBinder>(this);
 	}
 	HUDBinder->Bind(GameCore, Scoring, Randomizer);
+	// Board 바인더도 Unbind→Bind(Bind 내부에서 재진입 정리) — 이전 판 잔존 없음.
+	if (!BoardBinder)
+	{
+		BoardBinder = NewObject<UTetrisBoardViewModelBinder>(this);
+	}
+	BoardBinder->Bind(Board, GameCore);
 	GameCore->RestartGame();
 	TimeAccumulator = 0.0;
 	bRunning = true;
@@ -119,6 +145,11 @@ void UTetrisSessionSubsystem::RestartGame()
 UTetrisHUDViewModel* UTetrisSessionSubsystem::GetHUDViewModel() const
 {
 	return HUDBinder ? HUDBinder->GetViewModel() : nullptr;
+}
+
+UTetrisBoardViewModel* UTetrisSessionSubsystem::GetBoardViewModel() const
+{
+	return BoardBinder ? BoardBinder->GetViewModel() : nullptr;
 }
 
 void UTetrisSessionSubsystem::ResetHandling()

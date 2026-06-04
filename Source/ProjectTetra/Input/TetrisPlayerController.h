@@ -9,6 +9,7 @@
 class UInputMappingContext;
 class UInputAction;
 class UTetrisSessionSubsystem;
+class UUserWidget;
 
 /**
  * Tetris PlayerController — Enhanced Input(frame 도메인)을 "의도"로만 번역하는 어댑터.
@@ -54,7 +55,15 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Tetris|Input")
 	TObjectPtr<UInputAction> IA_Hold;
 
+	/** 보드 렌더 위젯 클래스(WBP_Board). BeginPlay에서 생성·viewport 부착. 미지정 시 무동작(null-safe). */
+	UPROPERTY(EditDefaultsOnly, Category = "Tetris|UI")
+	TSubclassOf<UUserWidget> BoardWidgetClass;
+
 private:
+	/** 생성된 보드 위젯 인스턴스(중복 생성 방지·수명 보유). */
+	UPROPERTY(Transient)
+	TObjectPtr<UUserWidget> BoardWidget;
+
 	/** 세션 서브시스템 캐시(지연 조회). PC와 World 수명이 같아 단순 캐시로 충분. */
 	UPROPERTY(Transient)
 	TObjectPtr<UTetrisSessionSubsystem> CachedSession;

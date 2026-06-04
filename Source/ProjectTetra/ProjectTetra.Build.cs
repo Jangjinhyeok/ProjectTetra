@@ -11,7 +11,8 @@ public class ProjectTetra : ModuleRules
 		PublicIncludePaths.AddRange(new string[] { ModuleDirectory });
 
 		// ModelViewViewModel/FieldNotification: HUD ViewModel(MVVM + FieldNotify) — viewmodel.md.
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "ModelViewViewModel", "FieldNotification" });
+		// UMG/Slate/SlateCore: Board Renderer(#12) — UUserWidget 기반 보드 위젯 + UniformGridPanel/Image 셀.
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "ModelViewViewModel", "FieldNotification", "UMG", "Slate", "SlateCore" });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 
