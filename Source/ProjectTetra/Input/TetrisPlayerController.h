@@ -55,14 +55,14 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Tetris|Input")
 	TObjectPtr<UInputAction> IA_Hold;
 
-	/** 보드 렌더 위젯 클래스(WBP_Board). BeginPlay에서 생성·viewport 부착. 미지정 시 무동작(null-safe). */
+	/** in-game 화면 레이아웃 위젯 클래스(WBP_GameLayout — 보드+HUD를 호스팅). BeginPlay에서 생성·viewport 부착. 미지정 시 무동작(null-safe). */
 	UPROPERTY(EditDefaultsOnly, Category = "Tetris|UI")
-	TSubclassOf<UUserWidget> BoardWidgetClass;
+	TSubclassOf<UUserWidget> InGameLayoutClass;
 
 private:
-	/** 생성된 보드 위젯 인스턴스(중복 생성 방지·수명 보유). */
+	/** 생성된 레이아웃 위젯 인스턴스(중복 생성 방지·수명 보유). */
 	UPROPERTY(Transient)
-	TObjectPtr<UUserWidget> BoardWidget;
+	TObjectPtr<UUserWidget> InGameLayout;
 
 	/** 세션 서브시스템 캐시(지연 조회). PC와 World 수명이 같아 단순 캐시로 충분. */
 	UPROPERTY(Transient)

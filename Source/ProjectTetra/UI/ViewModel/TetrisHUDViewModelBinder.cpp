@@ -13,12 +13,9 @@
 
 void UTetrisHUDViewModelBinder::Bind(UTetrisGameCore* Core, UTetrisScoring* Scoring, UTetrisRandomizer* Rand)
 {
-	if (ViewModel)
-	{
-		Unbind(); // 재진입 안전 — 이전 바인딩 정리 후 재구성.
-	}
+	DetachModel();     // 재진입 안전 — 이전 라운드 구독만 정리(VM은 보존해 View 연결 유지).
+	EnsureViewModel(); // VM 없으면 생성+등록(StartGame 단독 경로 방어). 있으면 재사용.
 
-	ViewModel = NewObject<UTetrisHUDViewModel>(this);
 	BoundCore = Core;
 	BoundScoring = Scoring;
 	BoundRandomizer = Rand;
@@ -70,11 +67,19 @@ void UTetrisHUDViewModelBinder::Bind(UTetrisGameCore* Core, UTetrisScoring* Scor
 		// dynamic 델리게이트만 AddDynamic + UFUNCTION 경로(viewmodel.md Edge 4).
 		Rand->OnNextQueueChanged.AddDynamic(this, &UTetrisHUDViewModelBinder::HandleNextQueueChanged);
 	}
-
-	RegisterToCollection();
 }
 
-void UTetrisHUDViewModelBinder::Unbind()
+void UTetrisHUDViewModelBinder::EnsureViewModel()
+{
+	if (ViewModel)
+	{
+		return; // 멱등 — 이미 생성·등록됨.
+	}
+	ViewModel = NewObject<UTetrisHUDViewModel>(this);
+	RegisterToCollection(); // 헤드리스(월드/서브시스템 부재)면 ResolveCollection null → no-op.
+}
+
+void UTetrisHUDViewModelBinder::DetachModel()
 {
 	if (BoundScoring)
 	{
@@ -102,11 +107,15 @@ void UTetrisHUDViewModelBinder::Unbind()
 	StateHandle.Reset();
 	HoldHandle.Reset();
 
-	UnregisterFromCollection();
-
 	BoundScoring = nullptr;
 	BoundCore = nullptr;
 	BoundRandomizer = nullptr;
+}
+
+void UTetrisHUDViewModelBinder::Unbind()
+{
+	DetachModel();
+	UnregisterFromCollection();
 	ViewModel = nullptr;
 }
 

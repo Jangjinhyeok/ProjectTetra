@@ -33,14 +33,14 @@ void ATetrisPlayerController::BeginPlay()
 		}
 	}
 
-	// 보드 위젯 생성·viewport 부착. 클래스 미지정 시 무동작(null-safe) — #12 G6에서 WBP_Board를 디폴트에 지정.
-	// 위젯은 NativeConstruct에서 VM을 "TetrisBoard" 컬렉션 키로 resolve하므로 여기선 클래스만 알면 된다(View는 Session/바인더 비참조).
-	if (BoardWidgetClass && !BoardWidget && IsLocalController())
+	// in-game 레이아웃(WBP_GameLayout: 보드+HUD) 생성·viewport 부착. 클래스 미지정 시 무동작(null-safe) — #13에서 디폴트 지정.
+	// 레이아웃 안의 보드/HUD 위젯이 각자 NativeConstruct에서 VM을 컬렉션 키로 self-resolve하므로 PC는 클래스만 알면 된다(View는 Session/바인더 비참조).
+	if (InGameLayoutClass && !InGameLayout && IsLocalController())
 	{
-		BoardWidget = CreateWidget<UUserWidget>(this, BoardWidgetClass);
-		if (BoardWidget)
+		InGameLayout = CreateWidget<UUserWidget>(this, InGameLayoutClass);
+		if (InGameLayout)
 		{
-			BoardWidget->AddToViewport();
+			InGameLayout->AddToViewport();
 		}
 	}
 }

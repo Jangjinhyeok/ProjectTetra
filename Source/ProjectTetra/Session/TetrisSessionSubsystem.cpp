@@ -88,13 +88,18 @@ void UTetrisSessionSubsystem::CreateAndWireCore()
 	GameCore = NewObject<UTetrisGameCore>(this);
 	GameCore->Initialize(Board, Randomizer, Scoring);
 
-	// Board VM을 월드 초기화 시점에 미리 생성·컬렉션 등록한다. 위젯은 NativeConstruct(PC BeginPlay,
-	// 이 시점보다 나중)에서 "TetrisBoard"로 안정적으로 resolve한다. StartGame은 이 VM을 재사용(rebind)한다.
+	// Board/HUD VM을 월드 초기화 시점에 미리 생성·컬렉션 등록한다. 위젯은 NativeConstruct(PC BeginPlay,
+	// 이 시점보다 나중)에서 컨텍스트명으로 안정적으로 resolve한다. StartGame은 이 VM들을 재사용(rebind)한다.
 	if (!BoardBinder)
 	{
 		BoardBinder = NewObject<UTetrisBoardViewModelBinder>(this);
 	}
 	BoardBinder->EnsureViewModel();
+	if (!HUDBinder)
+	{
+		HUDBinder = NewObject<UTetrisHUDViewModelBinder>(this);
+	}
+	HUDBinder->EnsureViewModel();
 }
 
 void UTetrisSessionSubsystem::StartGame(int64 Seed)

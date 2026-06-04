@@ -27,13 +27,19 @@ class PROJECTTETRA_API UTetrisHUDViewModelBinder : public UObject
 
 public:
 	/**
-	 * VM 생성 → 초기 스냅샷(getter pull, V2) → Model 델리게이트 구독 → 컬렉션 등록.
-	 * 재진입 안전: 이미 바인드된 상태면 먼저 Unbind한다.
+	 * VM 확보(EnsureViewModel) → 초기 스냅샷(getter pull, V2) → Model 델리게이트 구독.
+	 * 재진입 안전: 이미 바인드된 상태면 먼저 DetachModel한다(VM은 보존 — View 연결 유지).
 	 */
 	void Bind(UTetrisGameCore* Core, UTetrisScoring* Scoring, UTetrisRandomizer* Rand);
 
-	/** 구독 해제(핸들/dynamic) + 컬렉션 제거 + VM 참조 해제. */
+	/** Model 구독 해제(핸들/dynamic) + 컬렉션 제거 + VM 참조 해제(전체 teardown — Session Deinitialize용). */
 	void Unbind();
+
+	/**
+	 * VM을 1회 생성하고 컬렉션에 등록(멱등). Session 초기화에서 위젯 construct 이전에 호출되어
+	 * View가 "TetrisHUD"로 resolve할 대상을 미리 준비한다. 이미 있으면 no-op.
+	 */
+	void EnsureViewModel();
 
 	/** 소유 VM 노출(테스트/Session용). 미바인드 시 null. */
 	UTetrisHUDViewModel* GetViewModel() const { return ViewModel; }
@@ -45,6 +51,9 @@ private:
 	// Randomizer만 dynamic 델리게이트(BlueprintAssignable) → AddDynamic + UFUNCTION 핸들러. 나머지는 non-dynamic 람다.
 	UFUNCTION()
 	void HandleNextQueueChanged(const TArray<EPieceType>& NextQueue);
+
+	/** Model 델리게이트(non-dynamic 7 + dynamic 1) 해제 + 핸들 리셋 + Bound* null화. VM은 보존(재바인드 재진입용). */
+	void DetachModel();
 
 	/** MVVM 서브시스템(GameInstance) 부재 시 null 반환 → 컬렉션 등록은 graceful no-op(헤드리스 테스트 가드). */
 	UMVVMViewModelCollectionObject* ResolveCollection() const;
