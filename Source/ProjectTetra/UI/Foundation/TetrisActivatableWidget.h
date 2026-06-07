@@ -14,8 +14,9 @@
  * Why 입력 모드를 데이터로 선언: PC가 SetInputMode를 수동 토글하지 않고, 각 화면이
  *   GetDesiredInputConfig로 자신이 원하는 입력 모드(Game/Menu)를 선언하면 CommonUI 스택이
  *   활성 화면에 맞춰 자동 중재한다(CommonGameViewportClient 경유). 게임 화면=Game, 메뉴=Menu.
- * Why Back 핸들러는 별도 프로퍼티를 두지 않음: 기반 UCommonActivatableWidget이 이미
- *   bIsBackHandler UPROPERTY를 제공하므로 WBP Class Defaults에서 직접 켠다(중복 선언 시 UHT 충돌).
+ * Why Back 핸들러 프로퍼티를 재선언하지 않음: 기반 UCommonActivatableWidget이 이미
+ *   bIsBackHandler UPROPERTY를 제공한다(재선언 시 UHT 충돌, UE 5.7엔 SetIsBackHandler()도 없음).
+ *   Back을 받을 화면은 파생 생성자에서 상속 bIsBackHandler=true로 켠다(예: UTetrisPauseWidget).
  * Why Model/VM/Session 미참조: 계층 격리(HANDOFF §3). 이 베이스는 순수 화면 프레임이다.
  */
 UCLASS()
