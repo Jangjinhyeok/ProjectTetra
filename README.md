@@ -70,6 +70,71 @@ Board/Piece/FSM/Score    이벤트 발행                바인딩으로 표시�
 
 ---
 
+## UI 구현 구조
+
+UI는 두 축으로 설계했다 — **MVVM(로직/UI 분리)** + **CommonUI(화면 스택·입력 라우팅·게임패드)**. 아래는 각 서브시스템이 *무엇을·왜·어떻게* 구현됐는지의 분해다.
+
+> 📹 **데모 캡처 위치**: 각 항목의 `데모:` 줄에 GIF/스크린샷을 넣는다(에디터 PIE 캡처). 현재는 자리표시.
+
+### 1. CommonUI 화면 스택 — PrimaryGameLayout + 4 레이어
+
+UI를 "위젯 트리"가 아니라 **활성/비활성 화면들의 스택**으로 모델링한다. 루트 `UTetrisPrimaryGameLayout`이 4개 `CommonActivatableWidgetStack`(레이어)을 품고, `PushWidgetToLayer(EUILayer, …)`로 화면을 push/pop한다.
+
+```
+UTetrisPrimaryGameLayout (PC가 생성·viewport fill)
+├ MenuStack      ← 메인 메뉴 (Slice 2)
+├ GameStack      ← 인게임 화면 (보드 + HUD)
+├ GameMenuStack  ← Pause 오버레이
+└ ModalStack     ← GameOver / 다이얼로그
+```
+
+- 레이어 식별은 `EUILayer` enum(4레이어 고정 → GameplayTag 대비 보일러플레이트 회피).
+- 모든 화면의 공통 베이스 `UTetrisActivatableWidget`이 입력 모드·Back 핸들러를 데이터로 선언.
+- 📹 데모: *(Pause 오버레이 push/pop — 캡처 예정)*
+- 소스: [`TetrisPrimaryGameLayout.h`](Source/ProjectTetra/UI/Foundation/TetrisPrimaryGameLayout.h) · [`TetrisActivatableWidget.h`](Source/ProjectTetra/UI/Foundation/TetrisActivatableWidget.h)
+
+### 2. 입력 라우팅 — 게임 ↔ UI 자동 전환 (CommonUI 핵심)
+
+raw UMG가 못 푸는 부분. 각 화면이 `GetDesiredInputConfig()`로 **자신이 원하는 입력 모드(Game/Menu)를 데이터로 선언**하면, 스택의 최상단 화면에 맞춰 입력 모드가 자동 전환된다(`CommonGameViewportClient` 경유). PlayerController가 `SetInputMode`를 수동 토글하지 않는다.
+
+- 게임 화면 = `Game`(블록 입력 활성) / Pause·메뉴 = `Menu`(게임 입력 자동 차단, UI 네비만).
+- 게임패드 ↔ 키보드 포커스 전환은 `CommonButtonBase`가 내장 처리.
+- 📹 데모: *(Pause 시 블록 입력 차단 + 게임패드 메뉴 네비 — 캡처 예정)*
+- 소스: [`TetrisActivatableWidget.cpp`](Source/ProjectTetra/UI/Foundation/TetrisActivatableWidget.cpp) (`GetDesiredInputConfig`) · [`TetrisPlayerController.cpp`](Source/ProjectTetra/Input/TetrisPlayerController.cpp)
+- 개념 상세: [`docs/design/commonui.md`](docs/design/commonui.md)
+
+### 3. MVVM + FieldNotify — 데이터 주도 HUD
+
+게임 로직과 UI를 강하게 분리한다. **Model → Binder → ViewModel(FieldNotify) → View**. ViewModel은 순수 데이터 홀더로 Model/위젯을 컴파일 의존하지 않아 **위젯·월드 없이 단위 테스트**가 가능하다. 값이 실제로 바뀔 때만 통지(`Tick`/Property Binding polling 없음).
+
+```
+UTetrisGameCore/Scoring (델리게이트)
+   → UTetrisHUDViewModelBinder (구독 + setter + 컬렉션 등록)
+   → UTetrisHUDViewModel (FieldNotify 필드: Score/Level/Lines/Hold/Next/…)
+   → View (Global VM Collection에서 "TetrisHUD" 키로 self-resolve)
+```
+
+- View는 ViewModel만 알고 Model을 직접 참조하지 않는다(컬렉션 resolve).
+- 📹 데모: *(점수/레벨/줄 + Next/Hold 실시간 갱신 — 캡처 예정)*
+- 소스: [`TetrisHUDViewModel.h`](Source/ProjectTetra/UI/ViewModel/TetrisHUDViewModel.h) · [`TetrisHUDViewModelBinder.h`](Source/ProjectTetra/UI/ViewModel/TetrisHUDViewModelBinder.h) · [`TetrisHUDWidget.h`](Source/ProjectTetra/UI/Views/TetrisHUDWidget.h)
+- 설계 상세: [`docs/design/viewmodel.md`](docs/design/viewmodel.md)
+
+### 4. 보드 렌더링 — Board 전용 ViewModel
+
+보드 그리드도 View가 Model을 직접 읽지 않고 **Board 전용 VM(`UTetrisBoardViewModel`)을 경유**한다(MVVM 일관성). HUD VM과 동일한 패턴(전용 바인더 + Global VM Collection). 셀 렌더 MVP는 UMG `UniformGridPanel` + `Image`이며, 측정 기반 최적화(Retainer Box → 단일 머티리얼)는 후속 단계.
+
+- 📹 데모: *(보드 렌더 + 라인 클리어 — 캡처 예정)*
+- 소스: [`TetrisBoardViewModel.h`](Source/ProjectTetra/UI/ViewModel/TetrisBoardViewModel.h) · [`TetrisBoardWidget.h`](Source/ProjectTetra/UI/Views/TetrisBoardWidget.h)
+
+### 5. 화면 플로우 — 메뉴 ↔ 게임 ↔ GameOver (🔄 Slice 2 진행 중)
+
+단일 맵에서 **맵 로딩 없이 CommonUI 레이어 전환**으로 게임 플로우를 구성한다. 메인 메뉴(Menu 레이어) → Start → 게임(Game 레이어) → Top-out → GameOver(Modal 레이어) → Retry/메뉴 복귀. 화면 push/pop만으로 입력 모드가 자동 전환되는 구조를 플로우 전체로 확장한다.
+
+- 메인 메뉴 비주얼은 Tetr.io 홈 메뉴(가로 컬러 바)를 레퍼런스로 꾸민다(구조=C++, 비주얼=WBP).
+- 📹 데모: *(Slice 2 완료 후)*
+
+---
+
 ## 디렉토리 구조
 
 ```
