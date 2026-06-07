@@ -12,7 +12,8 @@ public class ProjectTetra : ModuleRules
 
 		// ModelViewViewModel/FieldNotification: HUD ViewModel(MVVM + FieldNotify) — viewmodel.md.
 		// UMG/Slate/SlateCore: Board Renderer(#12) — UUserWidget 기반 보드 위젯 + UniformGridPanel/Image 셀.
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "ModelViewViewModel", "FieldNotification", "UMG", "Slate", "SlateCore" });
+		// CommonUI/CommonInput: Menu #15 CommonUI 화면스택·입력라우팅 — CommonActivatableWidget/Stack + FUIInputConfig.
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "ModelViewViewModel", "FieldNotification", "UMG", "Slate", "SlateCore", "CommonUI", "CommonInput" });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 
