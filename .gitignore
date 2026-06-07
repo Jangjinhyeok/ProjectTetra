@@ -78,3 +78,8 @@ DerivedDataCache/*
 Plugins/Developer/RiderLink/
 .idea/
 *.iml
+
+# MCP (mcp-unreal) — local-only config, plugin, and generated doc index
+.mcp.json
+Plugins/MCPUnreal/
+docs/index.bleve/
