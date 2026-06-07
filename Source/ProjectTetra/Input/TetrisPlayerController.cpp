@@ -3,6 +3,10 @@
 #include "Input/TetrisPlayerController.h"
 #include "Input/TetrisHandlingTypes.h"
 #include "Session/TetrisSessionSubsystem.h"
+#include "FSM/TetrisGameCore.h"        // GetState()
+#include "Core/TetrisTypes.h"          // EGameState
+#include "UI/Foundation/TetrisPrimaryGameLayout.h"
+#include "UI/Views/TetrisPauseWidget.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
@@ -33,14 +37,23 @@ void ATetrisPlayerController::BeginPlay()
 		}
 	}
 
-	// in-game 레이아웃(WBP_GameLayout: 보드+HUD) 생성·viewport 부착. 클래스 미지정 시 무동작(null-safe) — #13에서 디폴트 지정.
-	// 레이아웃 안의 보드/HUD 위젯이 각자 NativeConstruct에서 VM을 컬렉션 키로 self-resolve하므로 PC는 클래스만 알면 된다(View는 Session/바인더 비참조).
-	if (InGameLayoutClass && !InGameLayout && IsLocalController())
+	// UI 루트(WBP_PrimaryGameLayout) 생성·viewport 부착 → Game 레이어에 게임 화면(WBP_GameScreen) push.
+	// Why 직접 AddToViewport 제거: HUD를 PrimaryGameLayout의 Game 레이어로 옮겨 부착 방식을 일원화(HANDOFF §2).
+	//   게임 화면 안의 보드/HUD 위젯이 각자 VM을 컬렉션 키로 self-resolve하므로 PC는 클래스만 알면 된다(View는 Session/바인더 비참조).
+	if (PrimaryGameLayoutClass && !PrimaryLayout && IsLocalController())
 	{
-		InGameLayout = CreateWidget<UUserWidget>(this, InGameLayoutClass);
-		if (InGameLayout)
+		PrimaryLayout = CreateWidget<UTetrisPrimaryGameLayout>(this, PrimaryGameLayoutClass);
+		if (PrimaryLayout)
 		{
-			InGameLayout->AddToViewport();
+			PrimaryLayout->AddToViewport();
+			if (GameScreenClass)
+			{
+				PrimaryLayout->PushWidgetToLayer(EUILayer::Game, GameScreenClass);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("[Tetra] PlayerController: GameScreenClass 미지정 — 에디터에서 WBP_GameScreen을 할당하세요."));
+			}
 		}
 	}
 }
@@ -81,6 +94,9 @@ void ATetrisPlayerController::SetupInputComponent()
 		EIC->BindAction(IA_SoftDrop, ETriggerEvent::Started, this, &ATetrisPlayerController::OnSoftDropStarted);
 		EIC->BindAction(IA_SoftDrop, ETriggerEvent::Completed, this, &ATetrisPlayerController::OnSoftDropCompleted);
 	}
+
+	// Pause: 이산 토글. 게임 입력과 달리 Session 시뮬이 아니라 UI 흐름을 제어한다.
+	if (IA_Pause) { EIC->BindAction(IA_Pause, ETriggerEvent::Started, this, &ATetrisPlayerController::OnPauseToggle); }
 }
 
 UTetrisSessionSubsystem* ATetrisPlayerController::GetSession()
@@ -157,4 +173,83 @@ void ATetrisPlayerController::OnHardDrop()
 void ATetrisPlayerController::OnHold()
 {
 	if (UTetrisSessionSubsystem* S = GetSession()) { S->PushInputEdge(EInputEdge::Hold); }
+}
+
+void ATetrisPlayerController::OnPauseToggle()
+{
+	// 이미 떠 있으면 토글로 닫는다(상태 가드 무관 — 진행 중에만 진입했으므로).
+	if (ActivePause)
+	{
+		ResumePause();
+		return;
+	}
+
+	UTetrisSessionSubsystem* S = GetSession();
+	if (!S || !PrimaryLayout)
+	{
+		return;
+	}
+
+	// 진행 중(Spawn/Falling/Locking/LineClear)일 때만 Pause 진입 — Idle/GameOver는 무동작.
+	const UTetrisGameCore* Core = S->GetGameCore();
+	if (!Core)
+	{
+		return;
+	}
+	const EGameState State = Core->GetState();
+	if (State == EGameState::Idle || State == EGameState::GameOver)
+	{
+		return;
+	}
+
+	// 시뮬 정지 → Pause 메뉴를 GameMenu 레이어에 push. 게임 입력 차단은 PauseWidget의
+	// GetDesiredInputConfig=Menu가 CommonGameViewportClient를 통해 자동 처리(PC가 IMC를 끄지 않음).
+	S->SetPaused(true);
+	ActivePause = Cast<UTetrisPauseWidget>(PrimaryLayout->PushWidgetToLayer(EUILayer::GameMenu, PauseWidgetClass));
+	if (ActivePause)
+	{
+		// 위젯은 명령만 발행(§3) — 실제 Session 제어는 아래 핸들러(PC)가 수행.
+		ActivePause->OnResumeRequested.AddUObject(this, &ATetrisPlayerController::ResumePause);
+		ActivePause->OnRestartRequested.AddUObject(this, &ATetrisPlayerController::HandleRestartRequested);
+		ActivePause->OnQuitRequested.AddUObject(this, &ATetrisPlayerController::HandleQuitRequested);
+	}
+	else
+	{
+		// push 실패 시 pause 상태 일관성 위해 즉시 복귀.
+		S->SetPaused(false);
+	}
+}
+
+void ATetrisPlayerController::ResumePause()
+{
+	if (!ActivePause)
+	{
+		return;
+	}
+
+	if (PrimaryLayout)
+	{
+		PrimaryLayout->RemoveWidget(*ActivePause);
+	}
+	ActivePause = nullptr;
+
+	if (UTetrisSessionSubsystem* S = GetSession())
+	{
+		S->SetPaused(false);
+	}
+}
+
+void ATetrisPlayerController::HandleRestartRequested()
+{
+	if (UTetrisSessionSubsystem* S = GetSession())
+	{
+		S->RestartGame();
+	}
+	ResumePause();
+}
+
+void ATetrisPlayerController::HandleQuitRequested()
+{
+	// PIE/스탠드얼론 종료. 패키징 빌드에서도 quit 콘솔 커맨드가 종료를 수행.
+	ConsoleCommand(TEXT("quit"));
 }
