@@ -4,6 +4,8 @@
 
 단순 기능 구현이 아니라 **UI 아키텍처 설계 능력**(MVVM + FieldNotify)과 **결정적 시뮬레이션(Deterministic Simulation)** 설계를 보여주는 것이 핵심 목표다. 레퍼런스는 Tetr.io / 뿌요뿌요 테트리스의 조작감.
 
+> 📋 **AI 코딩 에이전트(Claude Code)를 어떤 방법론으로 운용했는지**와 **시스템별 진행 내역**은 별도 정리: **[`docs/ai-workflow.md`](docs/ai-workflow.md)** — Architect/Builder 역할 분리, 게이트 단위 작업 분해, 학습 통합 워크플로우, 사람이 쥔 결정들.
+
 ---
 
 ## 왜 이 프로젝트인가 (목적)
@@ -62,9 +64,9 @@ Board/Piece/FSM/Score    이벤트 발행                바인딩으로 표시�
 | Input / Handling (DAS/ARR) | Core | ✅ 구현 + 테스트 | 고정스텝 순수 핸들링(DAS/ARR/DCD) + Enhanced Input |
 | Session 와이어링 | Core | ✅ 구현 + 테스트 | WorldSubsystem 호스트 + 고정스텝 구동 (ADR-0001) |
 | ViewModel (HUD) | UI | ✅ 구현 + 테스트 | HUD VM + 바인더, FieldNotify, MVVM Global Collection (위젯은 #12/#13) |
-| Board Renderer | UI | ✅ 구현 (PIE 육안 대기) | Board 전용 VM + 바인더 + UMG 보드 위젯(C++ base). WBP 제작 + PIE 확인 남음 |
-| HUD | UI | ⏳ 예정 | UMG, 이후 Retainer/SDF 최적화 |
-| Menu / Common UI | UI | ⏳ 예정 | 화면 스택, 입력 라우팅 |
+| Board Renderer | UI | ✅ 구현 + PIE | Board 전용 VM + 바인더 + UMG 보드 위젯(C++ base). PIE 육안 확인 완료 |
+| HUD | UI | ✅ 구현 + PIE | 점수/레벨/줄 + Next 큐 + Hold, 이벤트 주도 갱신. PIE 육안 확인 완료 |
+| Menu / Common UI | UI | 🔄 진행 중 (Slice 1 완료) | CommonUI 인프라(PrimaryGameLayout 4레이어 + 입력 라우팅) + Pause 메뉴 완료. 메인메뉴/GameOver는 Slice 2 |
 
 > 모든 Model 시스템은 **UI 없이 단위/통합 테스트로 완결**되도록 설계됨 (`Source/ProjectTetra/Tests/`).
 
@@ -119,8 +121,8 @@ ProjectTetra/
 ## 로드맵
 
 1. **ViewModel** ✅ — HUD VM + 바인더 + FieldNotify로 게임 상태 노출 (첫 MVVM 적용, Global VM Collection)
-2. **Board Renderer / HUD** (다음) — UMG 렌더링 → 측정 기반 최적화(Retainer Box → SDF)
-3. **Common UI** — 화면 스택·입력 라우팅·게임패드 지원
+2. **Board Renderer / HUD** ✅ — UMG 렌더링(보드 그리드 + 점수/레벨/줄 + Next/Hold), 이벤트 주도 갱신. 측정 기반 최적화(Retainer Box → SDF)는 후속
+3. **Common UI** 🔄 — Slice 1 완료(인프라 + Pause: 화면 스택·입력 라우팅·게임패드 네비·Back). Slice 2 = 메인메뉴 + GameOver 화면
 4. **Polish** — Widget Animation, Widget Pooling, 사운드, 랭킹(SaveGame)
 
-> Session 와이어링 + Input/Handling + ViewModel(HUD)은 완료됨 — `docs/architecture/adr-0001`, `docs/design/input-handling.md`, `docs/design/viewmodel.md` 참조. (키보드 플레이는 에디터에서 IMC/IA 에셋 + 기본 GameMode 지정 후 PIE 가능; HUD 위젯 바인딩은 #13)
+> Session 와이어링 + Input/Handling + ViewModel + Board/HUD 렌더링 + CommonUI Slice 1(Pause)까지 완료됨 — `docs/architecture/adr-0001`, `docs/design/input-handling.md`, `docs/design/viewmodel.md`, `docs/design/commonui.md` 참조. AI 활용 방법론·진행 내역은 `docs/ai-workflow.md`.
