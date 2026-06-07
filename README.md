@@ -4,8 +4,6 @@
 
 단순 기능 구현이 아니라 **UI 아키텍처 설계 능력**(MVVM + FieldNotify)과 **결정적 시뮬레이션(Deterministic Simulation)** 설계를 보여주는 것이 핵심 목표다. 레퍼런스는 Tetr.io / 뿌요뿌요 테트리스의 조작감.
 
-> 📋 **AI 코딩 에이전트(Claude Code)를 어떤 방법론으로 운용했는지**와 **시스템별 진행 내역**은 별도 정리: **[`docs/ai-workflow.md`](docs/ai-workflow.md)** — Architect/Builder 역할 분리, 게이트 단위 작업 분해, 학습 통합 워크플로우, 사람이 쥔 결정들.
-
 ---
 
 ## 왜 이 프로젝트인가 (목적)
@@ -100,6 +98,14 @@ ProjectTetra/
 
 **아키텍처 결정 기록(ADR)** — `docs/architecture/`
 - [`adr-0001-simulation-host-and-fixed-step-driver.md`](docs/architecture/adr-0001-simulation-host-and-fixed-step-driver.md) — 시뮬레이션 호스트(Tickable World Subsystem) & 고정스텝 구동
+
+---
+
+## AI 활용 워크플로우
+
+이 프로젝트는 AI 코딩 에이전트(Claude Code)를 **단순 코드 생성기가 아니라, 설계·검증·스코프 통제를 사람이 쥔 채 운용하는 도구**로 사용했다. AI 세션을 **Architect(설계·검토)와 Builder(구현)로 분리**하고, 모든 작업을 **게이트 단위로 분해 → 명세(HANDOFF) → 구현 → 검토(RESULT)**의 사이클로 진행했다. CommonUI처럼 학습이 목적인 영역은 개념 문서와 게이트별 학습 포인트를 먼저 만든 뒤 구현에 들어가는 **학습 통합 워크플로우**를 적용했다.
+
+→ 방법론 상세, 사람이 직접 내린 결정들, 시스템별 진행 내역: **[`docs/ai-workflow.md`](docs/ai-workflow.md)**
 
 ---
 
