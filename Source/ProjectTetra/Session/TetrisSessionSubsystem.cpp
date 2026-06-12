@@ -9,8 +9,10 @@
 #include "Core/TetrisTypes.h"
 #include "UI/ViewModel/TetrisHUDViewModelBinder.h"
 #include "UI/ViewModel/TetrisBoardViewModelBinder.h"
+#include "System/TetrisSettingsSubsystem.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
+#include "Engine/GameInstance.h"
 #include "HAL/IConsoleManager.h"
 
 // PIE 육안 관찰용 디버그 토글. 켜면 매 프레임 보드 상태를 화면+로그에 출력한다(릴리스 영향 없음).
@@ -162,6 +164,28 @@ void UTetrisSessionSubsystem::ResetHandling()
 	// 세션 SimHz를 강제로 일치시켜 ms→스텝 환산이 루프 주파수와 결정적으로 맞물리게 한다(에디터 값 비파괴 — 로컬 복사).
 	FHandlingConfig Cfg = HandlingConfig;
 	Cfg.SimHz = SimHz;
+
+	// 플레이어 설정(SaveGame 영속)이 있으면 DAS/ARR을 로컬 Cfg에만 덮어쓴다. 진입을 메인 메뉴로 한정했으므로
+	// StartGame/RestartGame 시점 pull로 충분하다(런타임 라이브 재주입 불요 — 설계노트 2). 서브시스템 부재(테스트 월드 등) 시 에디터 기본값 유지.
+	if (const UWorld* SessionWorld = GetWorld())
+	{
+		if (const UGameInstance* GI = SessionWorld->GetGameInstance())
+		{
+			if (const UTetrisSettingsSubsystem* Settings = GI->GetSubsystem<UTetrisSettingsSubsystem>())
+			{
+				Cfg.DASms = Settings->GetDASms();
+				Cfg.ARRms = Settings->GetARRms();
+				// DCD는 Cfg 경유(런타임 H5가 [0, DASSteps]로 재클램프). SDF는 GameCore 소유라 별도 경로지만
+				// 같은 settings-pull 시점에 묶어 단일 주입점(StartGame/RestartGame/Retry 공통)을 유지한다.
+				Cfg.DCDms = Settings->GetDCDms();
+				if (GameCore)
+				{
+					GameCore->SoftDropFactor = Settings->GetSDF();
+				}
+			}
+		}
+	}
+
 	Handling.SetConfig(Cfg);
 	Handling.Reset();
 	InputBuffer = FHandlingInput(); // held + edge 전부 클리어
