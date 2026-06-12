@@ -83,3 +83,6 @@ Plugins/Developer/RiderLink/
 .mcp.json
 Plugins/MCPUnreal/
 docs/index.bleve/
+
+# Nested separate workspace (own git repo — design/docs framework, not part of this project)
+my-game/
