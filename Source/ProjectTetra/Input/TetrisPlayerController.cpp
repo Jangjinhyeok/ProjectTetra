@@ -7,6 +7,10 @@
 #include "Core/TetrisTypes.h"          // EGameState
 #include "UI/Foundation/TetrisPrimaryGameLayout.h"
 #include "UI/Views/TetrisPauseWidget.h"
+#include "UI/Views/TetrisMainMenuWidget.h"
+#include "UI/Views/TetrisGameOverWidget.h"
+#include "UI/Views/TetrisSettingsWidget.h"
+#include "Misc/DateTime.h"            // MakeSeed: FDateTime::Now
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
@@ -20,6 +24,16 @@ void ATetrisPlayerController::BeginPlay()
 	Super::BeginPlay();
 
 	GetSession(); // 캐시 워밍
+
+	// GameOver 관찰: GameCore가 GameOver로 전이하면 PC가 결과 화면을 띄운다(이벤트 주도 §4 — 폴링 없음).
+	//   GameCore 수명=World, PC도 동일하나 EndPlay에서 명시 해제(안전).
+	if (CachedSession)
+	{
+		if (UTetrisGameCore* Core = CachedSession->GetGameCore())
+		{
+			Core->OnStateChanged.AddUObject(this, &ATetrisPlayerController::HandleGameStateChanged);
+		}
+	}
 
 	// IMC 등록 — LocalPlayer의 Enhanced Input 서브시스템에.
 	if (const ULocalPlayer* LP = GetLocalPlayer())
@@ -54,8 +68,25 @@ void ATetrisPlayerController::BeginPlay()
 			{
 				UE_LOG(LogTemp, Warning, TEXT("[Tetra] PlayerController: GameScreenClass 미지정 — 에디터에서 WBP_GameScreen을 할당하세요."));
 			}
+
+			// 게임 화면 위에 메인 메뉴를 띄운다 — 게임은 Idle로 메뉴 뒤에 대기, Start까지 입력 비활성.
+			ShowMainMenu();
 		}
 	}
+}
+
+void ATetrisPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	// BeginPlay에서 건 OnStateChanged 구독을 해제 — GameCore가 PC보다 오래 살 경우의 dangling 콜백 방지.
+	if (CachedSession)
+	{
+		if (UTetrisGameCore* Core = CachedSession->GetGameCore())
+		{
+			Core->OnStateChanged.RemoveAll(this);
+		}
+	}
+
+	Super::EndPlay(EndPlayReason);
 }
 
 void ATetrisPlayerController::SetupInputComponent()
@@ -211,7 +242,10 @@ void ATetrisPlayerController::OnPauseToggle()
 		// 위젯은 명령만 발행(§3) — 실제 Session 제어는 아래 핸들러(PC)가 수행.
 		ActivePause->OnResumeRequested.AddUObject(this, &ATetrisPlayerController::ResumePause);
 		ActivePause->OnRestartRequested.AddUObject(this, &ATetrisPlayerController::HandleRestartRequested);
-		ActivePause->OnQuitRequested.AddUObject(this, &ATetrisPlayerController::HandleQuitRequested);
+		// Pause Quit = 메뉴 복귀(§2 예외, 설계노트 4). 먼저 ResumePause로 Pause 위젯을 닫고(시뮬 해제),
+		//   이어 HandleReturnToMenu로 시뮬을 다시 정지한 뒤 메인 메뉴를 띄운다. (앱 종료는 메인 메뉴 Quit으로 일원화.)
+		ActivePause->OnQuitRequested.AddUObject(this, &ATetrisPlayerController::ResumePause);
+		ActivePause->OnQuitRequested.AddUObject(this, &ATetrisPlayerController::HandleReturnToMenu);
 	}
 	else
 	{
@@ -250,6 +284,150 @@ void ATetrisPlayerController::HandleRestartRequested()
 
 void ATetrisPlayerController::HandleQuitRequested()
 {
-	// PIE/스탠드얼론 종료. 패키징 빌드에서도 quit 콘솔 커맨드가 종료를 수행.
+	// 메인 메뉴 Quit = 앱 종료. PIE/스탠드얼론·패키징 모두 quit 콘솔 커맨드가 종료를 수행.
 	ConsoleCommand(TEXT("quit"));
+}
+
+void ATetrisPlayerController::ShowMainMenu()
+{
+	// 멱등: 이미 떠 있으면 중복 push 방지. 레이아웃/클래스 미구성 시 무동작(null-safe).
+	if (ActiveMainMenu || !PrimaryLayout)
+	{
+		return;
+	}
+	if (!MainMenuWidgetClass)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Tetra] PlayerController: MainMenuWidgetClass 미지정 — 에디터에서 WBP_MainMenu를 할당하세요."));
+		return;
+	}
+
+	// Menu 레이어에 push → 게임(Game 레이어) 위를 가린다. Menu 입력 모드가 게임 입력을 자동 억제.
+	ActiveMainMenu = Cast<UTetrisMainMenuWidget>(PrimaryLayout->PushWidgetToLayer(EUILayer::Menu, MainMenuWidgetClass));
+	if (ActiveMainMenu)
+	{
+		// 위젯은 명령만 발행(§3) — Start/Quit/Settings 실행은 PC가 수행.
+		ActiveMainMenu->OnStartRequested.AddUObject(this, &ATetrisPlayerController::HandleStartRequested);
+		ActiveMainMenu->OnQuitRequested.AddUObject(this, &ATetrisPlayerController::HandleQuitRequested);
+		ActiveMainMenu->OnSettingsRequested.AddUObject(this, &ATetrisPlayerController::HandleSettingsRequested);
+	}
+}
+
+void ATetrisPlayerController::HandleSettingsRequested()
+{
+	// 멱등: 이미 떠 있으면 무동작. 레이아웃/클래스 미구성 시 무동작(null-safe).
+	if (ActiveSettings || !PrimaryLayout)
+	{
+		return;
+	}
+	if (!SettingsWidgetClass)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Tetra] PlayerController: SettingsWidgetClass 미지정 — 에디터에서 WBP_SettingsMenu를 할당하세요."));
+		return;
+	}
+
+	// Menu 레이어에 push → 메인 메뉴 위에 쌓인다. 메인 메뉴는 스택에 남아 비활성 대기(Back pop 시 자동 복귀).
+	ActiveSettings = Cast<UTetrisSettingsWidget>(PrimaryLayout->PushWidgetToLayer(EUILayer::Menu, SettingsWidgetClass));
+	if (ActiveSettings)
+	{
+		ActiveSettings->OnBackRequested.AddUObject(this, &ATetrisPlayerController::HandleSettingsBack);
+	}
+}
+
+void ATetrisPlayerController::HandleSettingsBack()
+{
+	// 설정 화면만 pop → 아래 대기 중이던 메인 메뉴가 다시 최상단 활성이 된다(메인 메뉴 재push 불요).
+	if (PrimaryLayout && ActiveSettings)
+	{
+		// Why RemoveAll: 스택 위젯 풀이 인스턴스를 재사용하면 재진입(Settings 다시 열기)마다 OnBackRequested에
+		//   PC 바인딩이 누적된다. pop 전에 자기 바인딩만 끊어 중복 invoke를 막는다(non-UPROPERTY 델리게이트라 GC 자동 해제 없음).
+		ActiveSettings->OnBackRequested.RemoveAll(this);
+		PrimaryLayout->RemoveWidget(*ActiveSettings);
+	}
+	ActiveSettings = nullptr;
+}
+
+void ATetrisPlayerController::HandleStartRequested()
+{
+	// 새 시드로 게임 시작 후 메뉴를 pop → Game 레이어가 최상단 활성이 되어 게임 입력이 자동 복귀한다.
+	if (UTetrisSessionSubsystem* S = GetSession())
+	{
+		S->StartGame(MakeSeed());
+	}
+	if (PrimaryLayout && ActiveMainMenu)
+	{
+		PrimaryLayout->RemoveWidget(*ActiveMainMenu);
+	}
+	ActiveMainMenu = nullptr;
+}
+
+void ATetrisPlayerController::HandleGameStateChanged(EGameState /*OldState*/, EGameState NewState)
+{
+	// GameOver 진입 엣지에만 1회 결과 화면을 띄운다(중복 가드). 다른 전이는 무시.
+	if (NewState == EGameState::GameOver && !ActiveGameOver)
+	{
+		ShowGameOver();
+	}
+}
+
+void ATetrisPlayerController::ShowGameOver()
+{
+	if (!PrimaryLayout)
+	{
+		return;
+	}
+	if (!GameOverWidgetClass)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Tetra] PlayerController: GameOverWidgetClass 미지정 — 에디터에서 WBP_GameOver를 할당하세요."));
+		return;
+	}
+
+	// Modal 레이어(최상단)에 push — 게임/메뉴 위에 결과를 덮는다. 점수는 위젯이 VM에서 self-resolve.
+	ActiveGameOver = Cast<UTetrisGameOverWidget>(PrimaryLayout->PushWidgetToLayer(EUILayer::Modal, GameOverWidgetClass));
+	if (ActiveGameOver)
+	{
+		// 위젯은 명령만 발행(§3) — Retry/Menu 실행은 PC가 수행.
+		ActiveGameOver->OnRetryRequested.AddUObject(this, &ATetrisPlayerController::HandleRetryRequested);
+		ActiveGameOver->OnMenuRequested.AddUObject(this, &ATetrisPlayerController::HandleReturnToMenu);
+	}
+}
+
+void ATetrisPlayerController::HandleRetryRequested()
+{
+	// 같은 자리(Game 레이어)에서 새 판: RestartGame 후 결과 화면만 pop. StateChanged(GameOver→Spawn)는 무시됨.
+	if (UTetrisSessionSubsystem* S = GetSession())
+	{
+		S->RestartGame();
+	}
+	if (PrimaryLayout && ActiveGameOver)
+	{
+		PrimaryLayout->RemoveWidget(*ActiveGameOver);
+	}
+	ActiveGameOver = nullptr;
+}
+
+void ATetrisPlayerController::HandleReturnToMenu()
+{
+	// GameOver Menu / Pause Quit 공통 경로: 결과 화면이 떠 있으면 정리 → 시뮬 정지 → 메인 메뉴 복귀.
+	if (ActiveGameOver)
+	{
+		if (PrimaryLayout)
+		{
+			PrimaryLayout->RemoveWidget(*ActiveGameOver);
+		}
+		ActiveGameOver = nullptr;
+	}
+
+	// 뒤에 남은 게임 시뮬을 정지(메뉴 뒤에서 진행하지 않도록). GameOver 상태면 이미 비구동이라 무해.
+	if (UTetrisSessionSubsystem* S = GetSession())
+	{
+		S->SetPaused(true);
+	}
+
+	ShowMainMenu();
+}
+
+int64 ATetrisPlayerController::MakeSeed() const
+{
+	// 플레이마다 변주(현재 시각 ticks). 결정성은 "시드 고정 시 동일 결과"라 시드 자체는 매판 달라도 됨(설계노트 2).
+	return FDateTime::Now().GetTicks();
 }
